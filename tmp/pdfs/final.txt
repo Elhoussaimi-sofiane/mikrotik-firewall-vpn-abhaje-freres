@@ -1,0 +1,485 @@
+FIREWALL MIKROTIK
+ET VPN SECURISES
+
+Dossier de livraison
+technique
+Lab valide sous UTM sur
+Apple Silicon
+RouterOS CHR 7.22.1
+
+Objectif
+Construire et valider un pare-feu central pour le siege, un routeur de succursale et deux usages VPN: acces
+distant securise des employes et liaison securisee entre les deux sites.
+Etat
+
+Perimetre
+
+Date de validation
+
+VALIDE
+
+Lab UTM complet et teste
+
+26 juillet 2026
+
+Important: ce document ne contient aucun mot de passe ni aucune cle privee VPN. Les secrets doivent etre
+remis separement et stockes dans un gestionnaire de mots de passe.
+
+Validation du lab UTM - 26/07/2026
+
+Page 1
+
+Projet Firewall MikroTik - Dossier de livraison
+
+1. Resume du resultat
+Le lab simule une entreprise avec un siege (HQ), une succursale (Branch) et un employe externe. Les routeurs
+filtrent le trafic, donnent l'acces Internet aux reseaux internes et chiffrent les communications VPN.
+• R1-HQ protege le reseau principal 10.10.10.0/24.
+• R2-Branch protege le reseau de la succursale 10.30.30.0/24.
+• VPN employes permet a un poste externe autorise d'entrer dans le reseau via WireGuard.
+• VPN site-to-site relie HQ et Branch par un tunnel chiffre permanent.
+• Politique firewall: ce qui est explicitement autorise passe; le reste est bloque par defaut.
+
+2. Architecture validee
+VPN SITE-TO-SITE
+10.255.255.0/30 - UDP 13232
+
+EMPLOYE DISTANT
+VPN 10.20.20.0/24
+
+WireGuard
+
+R1-HQ
+
+R2-BRANCH
+
+UDP 13231
+
+WAN 192.168.64.2
+LAN 10.10.10.1
+
+WAN 192.168.64.4
+LAN 10.30.30.1
+
+RESEAU HQ
+
+RESEAU BRANCH
+
+Ubuntu 10.10.10.200
+
+10.30.30.0/24
+
+Lecture simple: R1-HQ est la porte principale du siege. R2-Branch est la porte de la succursale. WireGuard
+cree des tunnels chiffres entre les personnes/sites autorises.
+
+Validation du lab UTM - 26/07/2026
+
+Page 2
+
+Projet Firewall MikroTik - Dossier de livraison
+
+3. Plan d'adressage
+Element
+
+Interface / role
+
+Adresse ou reseau
+
+R1-HQ
+
+WAN UTM Shared
+
+192.168.64.2/24
+
+R1-HQ
+
+Passerelle LAN HQ
+
+10.10.10.1/24
+
+Ubuntu HQ
+
+Client / serveur de test
+
+10.10.10.200/24
+
+R2-Branch
+
+WAN UTM Shared
+
+192.168.64.4/24
+
+R2-Branch
+
+Passerelle LAN Branch
+
+10.30.30.1/24
+
+DHCP Branch
+
+Plage clients
+
+10.30.30.100 - 10.30.30.200
+
+VPN employes
+
+Reseau WireGuard
+
+10.20.20.0/24
+
+R1 VPN employes
+
+Passerelle VPN
+
+10.20.20.1
+
+Employe test
+
+Client VPN
+
+10.20.20.2
+
+VPN site-to-site
+
+Transit WireGuard
+
+10.255.255.0/30
+
+R1 / R2 site-to-site
+
+Extremites du tunnel
+
+10.255.255.1 / 10.255.255.2
+
+4. Machines virtuelles utiles
+VM
+
+Role
+
+Etat recommande
+
+MikroTik CHR Automated
+
+R1-HQ - pare-feu principal
+
+Demarrer
+
+R2-Branch
+
+Pare-feu de la succursale
+
+Demarrer
+
+HQ-Test-Client
+
+Ubuntu du reseau HQ pour les tests
+
+Demarrer pour les tests
+
+Remote-Employee-Test
+
+Simulation d'un employe externe
+
+Arrete hors test VPN
+
+Ne pas supprimer les anciennes VM existantes. Elles ne font pas partie du lab final, mais elles ont ete
+conservees conformement a la consigne.
+
+Validation du lab UTM - 26/07/2026
+
+Page 3
+
+Projet Firewall MikroTik - Dossier de livraison
+
+5. Fonctionnement du firewall
+Le firewall traite deux familles principales de trafic:
+
+INPUT
+Trafic qui vise le routeur lui-meme: WebFig, SSH, WinBox, ping vers la passerelle et ports WireGuard. Il protege
+l'administration et les services du routeur.
+
+FORWARD
+Trafic qui traverse le routeur: LAN vers Internet, VPN vers LAN, HQ vers Branch et Branch vers HQ. Il protege
+les machines placees derriere le routeur.
+Ordre
+logique
+
+Decision
+
+Pourquoi
+
+1
+
+Accepter established / related
+
+Laisser continuer les connexions deja autorisees et leurs flux
+associes.
+
+2
+
+Bloquer invalid
+
+Rejeter les paquets incoherents ou impossibles a rattacher a une
+connexion valide.
+
+3
+
+Autoriser les besoins connus
+
+LAN, administration controlee, WireGuard, HQ vers Branch et retour.
+
+4
+
+Drop final
+
+Tout ce qui n'a pas ete explicitement autorise est refuse.
+
+6. NAT masquerade
+Les adresses 10.x.x.x sont privees et ne circulent pas directement sur Internet. La regle masquerade remplace
+temporairement l'adresse source privee par l'adresse WAN du MikroTik. Quand la reponse revient, le routeur
+sait a quel client interne la remettre.
+Important: le trafic HQ - Branch ne doit pas etre masque. Les deux routeurs connaissent leurs reseaux par
+des routes WireGuard; ils conservent donc les vraies adresses internes pour faciliter le controle et les
+journaux.
+
+7. Services d'administration
+Service
+
+Etat
+
+Justification
+
+SSH
+
+Actif
+
+Administration securisee en ligne de commande.
+
+WebFig
+
+Actif
+
+Administration depuis le navigateur dans le lab.
+
+WinBox
+
+Actif
+
+Administration MikroTik si necessaire.
+
+Telnet, FTP, API, API-SSL, reverse
+proxy
+
+Desactives
+
+Reduction de la surface d'attaque.
+
+Validation du lab UTM - 26/07/2026
+
+Page 4
+
+Projet Firewall MikroTik - Dossier de livraison
+
+8. VPN WireGuard
+VPN employes - UDP 13231
+Un employe externe possedant sa cle WireGuard peut obtenir l'adresse 10.20.20.2 et acceder uniquement aux
+ressources autorisees. Le test a ete effectue depuis une VM placee sur le reseau externe UTM, pas depuis le
+LAN HQ.
+
+VPN site-to-site - UDP 13232
+R1-HQ et R2-Branch possedent chacun une paire de cles independante. Le tunnel transporte 10.10.10.0/24
+vers 10.30.30.0/24 sans NAT. Les routes et les regles firewall sont chargees automatiquement au demarrage.
+
+9. Matrice de tests
+Test
+
+Resultat
+
+Preuve observee
+
+Employe externe sans VPN vers HQ
+
+BLOQUE
+
+Ping et SSH HQ inaccessibles.
+
+Employe externe avec VPN vers HQ
+
+OK
+
+Handshake, ping et SSH reussis.
+
+Employe VPN vers Internet
+
+OK
+
+Connectivite conservee pendant le test.
+
+R2 transit vers R1
+
+OK
+
+10.255.255.2 vers 10.255.255.1: 0% perte.
+
+Branch vers HQ Ubuntu
+
+OK
+
+10.30.30.1 vers 10.10.10.200: 0% perte.
+
+HQ Ubuntu vers Branch
+
+OK
+
+10.10.10.200 vers 10.30.30.1: 0% perte.
+
+Ubuntu HQ vers Internet
+
+OK
+
+Reponse HTTPS HTTP/2 200.
+
+Redemarrage R2 puis R1
+
+OK
+
+Adresses, routes, firewall et tunnels revenus
+automatiquement.
+
+Conclusion des tests: le comportement attendu est valide dans le lab: le trafic non autorise est bloque, les
+flux necessaires sont autorises et les VPN reviennent apres redemarrage.
+
+Validation du lab UTM - 26/07/2026
+
+Page 5
+
+Projet Firewall MikroTik - Dossier de livraison
+
+10. Sauvegarde et restauration
+Deux formats sont fournis pour chaque routeur:
+• .backup: image binaire complete pour restaurer rapidement le meme routeur / la meme VM.
+• .rsc: export texte lisible, utile pour l'audit, la documentation ou une reconstruction manuelle. Les informations
+sensibles ont ete masquees dans l'export final.
+Routeur
+
+Sauvegarde binaire
+
+Export texte
+
+R1-HQ
+
+R1-HQ-final-validated.backup
+
+R1-HQ-final-validated.rsc
+
+R2-Branch
+
+R2-Branch-final-validated.backup
+
+R2-Branch-final-validated.rsc
+
+Procedure de restauration
+• Arreter les changements et identifier le bon routeur.
+• Importer le fichier .backup dans Files sur le routeur concerne.
+• Lancer la restauration depuis System > Backup, puis laisser le routeur redemarrer.
+• Verifier ensuite l'identite, les adresses IP, les interfaces, les routes, le firewall et les handshakes VPN.
+• Ne jamais restaurer le backup R1 sur R2 ou inversement.
+
+11. Exploitation quotidienne
+Controle
+
+Action attendue
+
+Etat des VPN
+
+Verifier le dernier handshake et les compteurs RX/TX WireGuard.
+
+Alertes firewall
+
+Verifier les compteurs des regles drop et les logs utiles.
+
+Sauvegardes
+
+Creer un backup avant chaque changement important et conserver une copie hors du
+routeur.
+
+Mises a jour
+
+Tester d'abord dans une copie du lab, sauvegarder, puis planifier la maintenance.
+
+Comptes
+
+Utiliser des comptes nominatifs et des mots de passe uniques; supprimer les acces des
+employes sortants.
+
+Validation du lab UTM - 26/07/2026
+
+Page 6
+
+Projet Firewall MikroTik - Dossier de livraison
+
+12. Passage du lab a la production
+Le lab prouve le fonctionnement technique, mais il ne faut pas copier aveuglement les adresses UTM en
+entreprise. La production doit etre adaptee au vrai plan reseau, aux fournisseurs Internet et aux exigences de
+securite de l'entreprise.
+A valider avant production
+
+Pourquoi
+
+Materiel / hyperviseur supporte et redondance
+
+Eviter qu'une seule panne coupe toute l'entreprise.
+
+Vraies interfaces WAN et LAN
+
+Remplacer le reseau Shared UTM par le cablage et les VLAN reels.
+
+IP publique ou redirection UDP 13231/13232
+
+Rendre les serveurs WireGuard joignables depuis l'exterieur.
+
+DNS dynamique si IP WAN variable
+
+Permettre aux clients VPN de retrouver le site apres un changement
+d'IP.
+
+Restriction de WebFig / SSH / WinBox
+
+Autoriser l'administration seulement depuis un VLAN ou des IP de
+gestion.
+
+Certificat HTTPS valide
+
+Proteger WebFig si son usage est maintenu.
+
+MFA et gestion des identites
+
+Renforcer l'acces des administrateurs et le cycle de vie des employes.
+
+Journalisation et supervision
+
+Detecter les pannes, tentatives d'intrusion et anomalies.
+
+Test externe reel
+
+Valider depuis une vraie connexion 4G/5G ou un autre FAI.
+
+Plan de retour arriere
+
+Pouvoir restaurer rapidement le service en cas d'echec.
+
+Statut final: LAB FONCTIONNEL ET VALIDE. Le passage en production reste une operation separee qui doit
+etre planifiee avec l'entreprise et adaptee a son infrastructure reelle.
+
+13. Contenu du dossier de livraison
+• Le present dossier PDF.
+• Les backups binaires finals de R1-HQ et R2-Branch.
+• Les exports texte finals de R1-HQ et R2-Branch.
+• Les VM UTM conservees sur le Mac pour demonstration et tests.
+Fin du document
+
+Validation du lab UTM - 26/07/2026
+
+Page 7
+
+

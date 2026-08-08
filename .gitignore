@@ -1,0 +1,43 @@
+# ---------------------------------------------------------------------------
+# Projet Firewall MikroTik / VPN - Abhaje Freres
+# ---------------------------------------------------------------------------
+
+# macOS
+.DS_Store
+
+# Images disque et ISO : beaucoup trop volumineuses pour Git.
+# HQ-Test-Client-installed-backup.qcow2 pese a lui seul 4,4 Go.
+*.qcow2
+*.iso
+*.img
+
+# Enregistrement audio de la presentation (55 Mo).
+# A conserver dans la livraison, pas dans l'historique Git.
+*.aiff
+
+# SECRETS - ne jamais versionner.
+#
+# Les sauvegardes binaires .backup de RouterOS contiennent l'integralite de la
+# configuration, y compris les cles privees WireGuard et les hachages de mots
+# de passe des comptes administrateurs. Les exports texte .rsc, eux, n'en
+# contiennent pas : ce sont eux qui sont versionnes.
+#
+# Cette regle applique la politique deja ecrite au chapitre 11 du dossier :
+# "Les secrets doivent etre transmis separement et stockes dans un
+# gestionnaire de mots de passe."
+*.backup
+
+# Le fichier cloud-init contient un hachage bcrypt du mot de passe du compte
+# "employees" de la VM Ubuntu de test.
+cloud-init-seed/user-data
+
+# Sorties de build et dependances (service-platform)
+node_modules/
+dist/
+build/
+.env
+.env.*
+.next/
+
+# service-platform est un depot Git independant (projet separe).
+service-platform/
