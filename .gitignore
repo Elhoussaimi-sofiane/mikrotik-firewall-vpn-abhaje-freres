@@ -11,6 +11,15 @@
 *.iso
 *.img
 
+# EXCEPTION : le disque du routeur R1-HQ (28 Mo compresses) est versionne,
+# afin que la machine virtuelle demarre telle quelle apres le clonage.
+# Voir l'avertissement de securite du README : ce disque contient les cles
+# privees WireGuard et les hachages de mots de passe du routeur.
+!vm/MikroTik CHR Automated.utm/Data/chr-7.22.1-arm64.qcow2
+
+# Variables EFI regenerees par UTM au premier demarrage (376 Mo, inutile).
+efi_vars.fd
+
 # Enregistrement audio de la presentation (55 Mo).
 # A conserver dans la livraison, pas dans l'historique Git.
 *.aiff
